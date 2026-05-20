@@ -500,16 +500,45 @@ func discoverKiroModels(ctx context.Context, executablePath string) ([]Model, er
 	})
 }
 
-// discoverTraeCliModels spins up a throwaway `coco acp serve` process and parses
-// the models block Coco returns from session/new. Coco uses `acp serve` (two
-// subcommands) instead of the single `acp` subcommand used by hermes/kimi/kiro.
+// discoverTraeCliModels runs `coco models` and parses the model names.
+// Unlike hermes/kimi/kiro, Coco has a dedicated `models` subcommand that
+// lists available models directly — no ACP session needed.
 func discoverTraeCliModels(ctx context.Context, executablePath string) ([]Model, error) {
-	return discoverACPModels(ctx, executablePath, acpDiscoveryProvider{
-		defaultBin:   "coco",
-		clientName:   "multica-model-discovery",
-		acpArgs:      []string{"acp", "serve", "--yolo"},
-		tmpdirPrefix: "multica-traecli-discovery-",
-	})
+	if executablePath == "" {
+		executablePath = "coco"
+	}
+	if _, err := exec.LookPath(executablePath); err != nil {
+		return []Model{}, nil
+	}
+	runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(runCtx, executablePath, "models")
+	hideAgentWindow(cmd)
+	out, err := cmd.Output()
+	if err != nil {
+		return []Model{}, nil
+	}
+	return parseTraeCliModels(string(out)), nil
+}
+
+// parseTraeCliModels parses the output of `coco models`.
+// Each line is a model name (e.g. "DeepSeek-V4-Pro", "GPT-5.5").
+func parseTraeCliModels(output string) []Model {
+	scanner := bufio.NewScanner(strings.NewReader(output))
+	var models []Model
+	seen := map[string]bool{}
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		if seen[line] {
+			continue
+		}
+		seen[line] = true
+		models = append(models, Model{ID: line, Label: line})
+	}
+	return models
 }
 
 // discoverCopilotModels spins up `copilot --acp` and reads the
