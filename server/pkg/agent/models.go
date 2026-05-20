@@ -122,6 +122,10 @@ func ListModels(ctx context.Context, providerType, executablePath string) ([]Mod
 		return cachedDiscovery(providerType, func() ([]Model, error) {
 			return discoverKiroModels(ctx, executablePath)
 		})
+	case "traecli":
+		return cachedDiscovery(providerType, func() ([]Model, error) {
+			return discoverTraeCliModels(ctx, executablePath)
+		})
 	case "opencode":
 		return cachedDiscovery(providerType, func() ([]Model, error) {
 			return discoverOpenCodeModels(ctx, executablePath)
@@ -493,6 +497,18 @@ func discoverKiroModels(ctx context.Context, executablePath string) ([]Model, er
 		defaultBin:   "kiro-cli",
 		clientName:   "multica-model-discovery",
 		tmpdirPrefix: "multica-kiro-discovery-",
+	})
+}
+
+// discoverTraeCliModels spins up a throwaway `coco acp serve` process and parses
+// the models block Coco returns from session/new. Coco uses `acp serve` (two
+// subcommands) instead of the single `acp` subcommand used by hermes/kimi/kiro.
+func discoverTraeCliModels(ctx context.Context, executablePath string) ([]Model, error) {
+	return discoverACPModels(ctx, executablePath, acpDiscoveryProvider{
+		defaultBin:   "coco",
+		clientName:   "multica-model-discovery",
+		acpArgs:      []string{"acp", "serve", "--yolo"},
+		tmpdirPrefix: "multica-traecli-discovery-",
 	})
 }
 
