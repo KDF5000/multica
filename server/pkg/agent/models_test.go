@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 )
@@ -144,9 +145,9 @@ func TestInferCopilotProvider(t *testing.T) {
 		"raptor-mini":       "",
 		// negative cases: must not be misidentified as OpenAI
 		// reasoning series even though they start with `o`.
-		"opus-fake":         "",
-		"omni":              "",
-		"o":                 "",
+		"opus-fake": "",
+		"omni":      "",
+		"o":         "",
 	}
 	for id, want := range cases {
 		if got := inferCopilotProvider(id); got != want {
@@ -325,6 +326,61 @@ bareword-only-line
 	// the legacy `provider:model` form gets colon→slash normalization.
 	if models[3].ID != "opencode/claude-sonnet-4-6:exp" || models[3].Provider != "opencode" {
 		t.Errorf("expected ':' inside table-format model name to be preserved: %+v", models[3])
+	}
+}
+
+func TestParseTraeCliModels(t *testing.T) {
+	input := `Seed-Dogfooding-2.0
+Doubao-Seed-2.0-Code
+Seed-Dogfooding-2.0
+
+GPT-5.5
+`
+	models := parseTraeCliModels(input)
+	if len(models) != 3 {
+		t.Fatalf("expected 3 models (blank skipped, duplicate deduped), got %d: %+v", len(models), models)
+	}
+	for i, want := range []string{"Seed-Dogfooding-2.0", "Doubao-Seed-2.0-Code", "GPT-5.5"} {
+		if models[i].ID != want || models[i].Label != want {
+			t.Errorf("model[%d] = %+v, want id/label %q", i, models[i], want)
+		}
+	}
+}
+
+func TestDiscoverTraeCliModelsFallsBackToACP(t *testing.T) {
+	script := t.TempDir() + "/coco"
+	if err := os.WriteFile(script, []byte(`#!/bin/sh
+if [ "$1" = "models" ]; then
+  exit 1
+fi
+if [ "$1" = "acp" ] && [ "$2" = "serve" ]; then
+  while IFS= read -r line; do
+    case "$line" in
+      *'"id":1'*)
+        printf '%s\n' '{"jsonrpc":"2.0","id":1,"result":{}}'
+        ;;
+      *'"id":2'*)
+        printf '%s\n' '{"jsonrpc":"2.0","id":2,"result":{"sessionId":"s","models":{"availableModels":[{"modelId":"remote/Seed-Dogfooding-2.0","name":"Seed Dogfooding"},{"modelId":"remote/GPT-5.5","name":"GPT-5.5"}],"currentModelId":"remote/GPT-5.5"}}}'
+        ;;
+    esac
+  done
+fi
+`), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	models, err := discoverTraeCliModels(context.Background(), script)
+	if err != nil {
+		t.Fatalf("discoverTraeCliModels error: %v", err)
+	}
+	if len(models) != 2 {
+		t.Fatalf("expected 2 ACP fallback models, got %d: %+v", len(models), models)
+	}
+	if models[0].ID != "remote/Seed-Dogfooding-2.0" || models[0].Label != "Seed Dogfooding" {
+		t.Errorf("unexpected first model: %+v", models[0])
+	}
+	if models[1].ID != "remote/GPT-5.5" || !models[1].Default {
+		t.Errorf("expected GPT fallback model to be default, got %+v", models[1])
 	}
 }
 

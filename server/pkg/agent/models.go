@@ -501,8 +501,10 @@ func discoverKiroModels(ctx context.Context, executablePath string) ([]Model, er
 }
 
 // discoverTraeCliModels runs `coco models` and parses the model names.
-// Unlike hermes/kimi/kiro, Coco has a dedicated `models` subcommand that
-// lists available models directly — no ACP session needed.
+// Coco normally exposes a dedicated `models` subcommand, but remote/headless
+// hosts can fail that path while `coco acp serve` is still usable for normal
+// task execution. Fall back to the ACP `session/new` model catalog so the UI
+// follows the same transport that actually runs work.
 func discoverTraeCliModels(ctx context.Context, executablePath string) ([]Model, error) {
 	if executablePath == "" {
 		executablePath = "coco"
@@ -515,10 +517,22 @@ func discoverTraeCliModels(ctx context.Context, executablePath string) ([]Model,
 	cmd := exec.CommandContext(runCtx, executablePath, "models")
 	hideAgentWindow(cmd)
 	out, err := cmd.Output()
-	if err != nil {
-		return []Model{}, nil
+	if err == nil {
+		models := parseTraeCliModels(string(out))
+		if len(models) > 0 {
+			return models, nil
+		}
 	}
-	return parseTraeCliModels(string(out)), nil
+	return discoverTraeCliACPModels(ctx, executablePath)
+}
+
+func discoverTraeCliACPModels(ctx context.Context, executablePath string) ([]Model, error) {
+	return discoverACPModels(ctx, executablePath, acpDiscoveryProvider{
+		defaultBin:   "coco",
+		clientName:   "multica",
+		tmpdirPrefix: "multica-coco-models-*",
+		acpArgs:      []string{"acp", "serve", "--yolo"},
+	})
 }
 
 // parseTraeCliModels parses the output of `coco models`.

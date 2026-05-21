@@ -9,7 +9,9 @@ export const runtimeModelsKeys = {
 };
 
 const POLL_INTERVAL_MS = 500;
-const POLL_TIMEOUT_MS = 30_000;
+// Must exceed the server-side pending + running windows
+// (30s + 60s) so slow remote runtimes can report their terminal state.
+const POLL_TIMEOUT_MS = 95_000;
 
 // resolveRuntimeModels initiates a list-models request against the daemon
 // (via heartbeat piggyback) and polls until the daemon reports back or
