@@ -22,10 +22,10 @@ import { useT } from "../../i18n";
 type Step = "instructions" | "success";
 
 const INSTALL_CMD =
-  "curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash";
+  "curl -fsSL https://tosv.byted.org/obj/tos-oplog/tools/ai/multica/scripts/install.sh | bash";
 const SETUP_CMD = "multica setup";
-const TOKEN_CMD = `multica config set server_url https://api.multica.ai
-multica config set app_url https://multica.ai
+const TOKEN_CMD = `multica config set server_url https://store-multica-boe.byted.org
+multica config set app_url https://store-multica-boe.byted.org
 multica login --token <YOUR_TOKEN>
 multica daemon start`;
 

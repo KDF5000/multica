@@ -88,14 +88,5 @@ win:
   target:
     - nsis
   artifactName: multica-desktop-${version}-windows-${arch}.${ext}
-publish:
-  provider: github
-  owner: multica-ai
-  repo: multica
-  # Align with our CLI release flow which pre-creates a *published* GitHub
-  # Release via `gh release create`. The electron-builder default of
-  # `releaseType: draft` conflicts with `existingType=release` and causes
-  # uploads of the DMG/ZIP/blockmaps/latest-mac.yml to be silently skipped,
-  # which breaks electron-updater auto-update on installed clients.
-  releaseType: release
+# No publish configured — self-hosted BYTED deployment.
 npmRebuild: false

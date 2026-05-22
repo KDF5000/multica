@@ -37,6 +37,24 @@ const REVALIDATE_SECONDS = 300;
 
 const FRESH_RELEASE_WINDOW_MS = 60 * 60 * 1000;
 
+/**
+ * When MULTICA_DOWNLOAD_ASSETS_JSON is set, the download page serves
+ * static assets from this JSON instead of fetching GitHub Releases.
+ * This is the self-hosted / on-prem deployment path.
+ *
+ * The JSON must conform to the DownloadAssets interface, e.g.:
+ * {
+ *   "macArm64Dmg": "https://tosv.byted.org/obj/.../multica-desktop-0.3.3-mac-arm64.dmg",
+ *   "macArm64Zip": "https://tosv.byted.org/obj/.../multica-desktop-0.3.3-mac-arm64.zip",
+ *   "winX64Exe":   "https://tosv.byted.org/obj/.../multica-desktop-0.3.3-windows-x64.exe",
+ *   "linuxAmd64AppImage": "https://tosv.byted.org/obj/.../multica-desktop-0.3.3-linux-amd64.AppImage",
+ *   "linuxAmd64Deb": "https://tosv.byted.org/obj/.../multica-desktop-0.3.3-linux-amd64.deb"
+ * }
+ *
+ * MULTICA_DOWNLOAD_VERSION and MULTICA_DOWNLOAD_RELEASE_URL override
+ * the version string and the "Release Notes" link respectively.
+ */
+
 interface GitHubReleasePayload {
   tag_name?: string;
   published_at?: string;
@@ -47,6 +65,24 @@ interface GitHubReleasePayload {
 }
 
 export async function fetchLatestRelease(): Promise<LatestRelease> {
+  // Self-hosted / on-prem path: serve static download assets from env vars
+  // instead of fetching GitHub Releases. Set MULTICA_DOWNLOAD_ASSETS_JSON
+  // to a JSON string conforming to the DownloadAssets interface.
+  const envAssets = process.env.MULTICA_DOWNLOAD_ASSETS_JSON;
+  if (envAssets) {
+    try {
+      const assets = JSON.parse(envAssets) as DownloadAssets;
+      return {
+        version: process.env.MULTICA_DOWNLOAD_VERSION ?? null,
+        publishedAt: null,
+        htmlUrl: process.env.MULTICA_DOWNLOAD_RELEASE_URL ?? null,
+        assets,
+      };
+    } catch (err) {
+      console.warn("[download] MULTICA_DOWNLOAD_ASSETS_JSON parse failed:", err);
+    }
+  }
+
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
