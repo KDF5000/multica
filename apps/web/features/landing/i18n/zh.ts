@@ -5,9 +5,14 @@ export function createZhDict(allowSignup: boolean): LandingDict {
   return {
   header: {
     github: "GitHub",
-    login: "\u767b\u5f55",
+    cta: "\u5f00\u59cb\u4f7f\u7528",
     dashboard: "\u8fdb\u5165\u5de5\u4f5c\u53f0",
+    docs: "\u6587\u6863",
     changelog: "\u66f4\u65b0\u65e5\u5fd7",
+    useCases: "\u6848\u4f8b",
+    navigation: "\u4e3b\u5bfc\u822a",
+    openMenu: "\u6253\u5f00\u5bfc\u822a\u83dc\u5355",
+    closeMenu: "\u5173\u95ed\u5bfc\u822a\u83dc\u5355",
   },
 
   hero: {
@@ -228,6 +233,7 @@ export function createZhDict(allowSignup: boolean): LandingDict {
         links: [
           { label: "\u529f\u80fd\u7279\u6027", href: "#features" },
           { label: "\u5982\u4f55\u5de5\u4f5c", href: "#how-it-works" },
+          { label: "\u6848\u4f8b", href: "/usecases" },
           { label: "更新日志", href: "/changelog" },
           { label: "下载", href: "/download" },
         ],
